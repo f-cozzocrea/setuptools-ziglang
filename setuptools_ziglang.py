@@ -1,4 +1,6 @@
 from setuptools.command.build_ext import build_ext
+from setuptools.errors import CompileError
+from setuptools._distutils.ccompiler import CCompiler
 
 class build_zig_ext(build_ext):
     def build_extensions(self):
@@ -12,5 +14,9 @@ class build_zig_ext(build_ext):
         build_ext.build_extensions(self)
 
 
+class ZigCompiler(CCompiler):
+    pass
 
+class ZigCompileError(CompileError):
+    pass
 
