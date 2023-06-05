@@ -7,7 +7,7 @@ DIR = path.dirname(__file__)
 setup(
     name="hpy-test",
     hpy_ext_modules=[
-        Extension('hpy_test', sources=[path.join(DIR, 'hello.c')]),
+        Extension('hpy_test', sources=[path.join(DIR, 'hpy-test.c')]),
     ],
     setup_requires=['hpy'],
 )
