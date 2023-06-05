@@ -1,9 +1,9 @@
 from setuptools import Extension, setup
 
 setup(
-    name='zig_sum',
+    name="c_ext",
     version='0.0.0',
-    ext_modules=[Extension('zig_sum.sum', ['sum.c', 'add.zig', ])],
+    ext_modules=[Extension("c_sum", ["sum.c"])],
     setup_requires=['setuptools-ziglang'],
 )
 
