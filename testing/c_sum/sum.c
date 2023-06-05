@@ -15,7 +15,7 @@ static struct PyMethodDef methods[] = {
     {NULL, NULL}
 };
 
-static struct PyModuleDef zigmodule = {
+static struct PyModuleDef sum_module = {
     PyModuleDef_HEAD_INIT,
     "sum",
     NULL,
@@ -23,7 +23,8 @@ static struct PyModuleDef zigmodule = {
     methods
 };
 
-PyMODINIT_FUNC PyInit_c_sum(void) {
-    return PyModule_Create(&zigmodule);
+PyMODINIT_FUNC 
+PyInit_sum(void) {
+    return PyModule_Create(&sum_module);
 }
 
