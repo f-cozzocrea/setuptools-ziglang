@@ -1,7 +1,11 @@
 from setuptools.errors import SetupError
+from setuptools.dep_util import newer_group
 from setuptools.command.build_ext import build_ext
 
 import sys
+import logging as log
+
+log.basicConfig(level=log.INFO)
 
 class build_zig_ext(build_ext):
     def build_extension(self, ext):
@@ -55,6 +59,7 @@ class build_zig_ext(build_ext):
         for undef in ext.undef_macros:
             macros.append((undef,))
 
+        ### FIXME!!! This part and afterwards is where C code is compiled.
         objects = self.compiler.compile(
             sources,
             output_dir=self.build_temp,
@@ -69,6 +74,31 @@ class build_zig_ext(build_ext):
         # needs it.
         self._built_objects = objects[:]
 
+         # Now link the object files together into a "shared object" --
+        # of course, first we have to figure out all the other things
+        # that go into the mix.
+        if ext.extra_objects:
+            objects.extend(ext.extra_objects)
+        extra_args = ext.extra_link_args or []
+
+        # Detect target language, if not provided
+        language = ext.language or self.compiler.detect_language(sources)
+
+        ### FIXME!!! This is where the C code is linked to a shared object
+        self.compiler.link_shared_object(
+            objects,
+            ext_path,
+            libraries=self.get_libraries(ext),
+            library_dirs=ext.library_dirs,
+            runtime_library_dirs=ext.runtime_library_dirs,
+            extra_postargs=extra_args,
+            export_symbols=self.get_export_symbols(ext),
+            debug=self.debug,
+            build_temp=self.build_temp,
+            target_lang=language,
+        )
+
+        ### This code is copied from zaml. Need to update and modify for this lib.
         if not os.path.exists(self.build_lib):
             os.makedirs(self.build_lib)
         windows = platform.system() == "Windows"
