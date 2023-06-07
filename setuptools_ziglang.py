@@ -1,5 +1,6 @@
-from setuptools.errors import SetupError
-from setuptools.dep_util import newer_group
+from setuptools import Extension
+from setuptools._distutils.errors import DistutilsSetupError
+from setuptools._distutils.dep_util import newer_group 
 from setuptools.command.build_ext import build_ext
 
 import sys
@@ -7,8 +8,17 @@ import logging as log
 
 log.basicConfig(level=log.INFO)
 
+class ZigExtension(Extension):
+    pass 
+
 class build_zig_ext(build_ext):
     def build_extension(self, ext):
+
+        # Use regular build_ext method for non-ZigExtensions
+        if not isinstance(ext, ZigExtension):
+            build_ext.build_extension(ext)
+            return
+
         self.compiler.set_executable("compiler", ["zig", "cc"])
         self.compiler.set_executable("compiler_so", ["zig", "cc"])
         self.compiler.set_executable("compiler_cxx", ["zig", "cc"])
@@ -18,13 +28,11 @@ class build_zig_ext(build_ext):
         
         sources = ext.sources
         if sources is None or not isinstance(sources, (list, tuple)):
-            raise SetupError(
+            raise DistutilsSetupError(
                 "in 'ext_modules' option (extension '%s'), "
                 "'sources' must be present and must be "
                 "a list of source filenames" % ext.name
             )
-        # sort to make the resulting .so file build reproducible
-        sources = sorted(sources)
 
         ext_path = self.get_ext_fullpath(ext.name)
         depends = sources + ext.depends
@@ -39,7 +47,48 @@ class build_zig_ext(build_ext):
         # accordingly.
         sources = self.swig_sources(sources, ext)
 
-        # Next, compile the source code to object files.
+        # sort to make the resulting .so file build reproducible
+        zig_sources = []
+        c_sources = []
+        for f in sources:
+            if f.endswith('.zig'):
+                zig_sources.append(f)
+            else:
+                c_sources.append(f)
+        
+        sources = sorted(sources)
+        zig_sources = sorted(zig_sources)
+        c_sources = sorted(c_sources)
+
+        ### This code is copied from zaml. Need to update and modify for this lib.
+        if not os.path.exists(self.build_lib):
+            os.makedirs(self.build_lib)
+        windows = platform.system() == "Windows"
+        self.spawn(
+            [
+                "zig",
+                "build-lib",
+                "-O",
+                "ReleaseFast",
+                "-lc",
+                *(["-target", "x86_64-windows-msvc"] if windows else []),
+                f"-femit-bin={self.get_ext_fullpath(ext.name)}",
+                "-fallow-shlib-undefined",
+                "-dynamic",
+                *[f"-I{d}" for d in self.include_dirs],
+                *(
+                    [
+                        f"-L{sysconfig.get_config_var('installed_base')}\\Libs",
+                        "-lpython3",
+                    ]
+                    if windows
+                    else []
+                ),
+                ext.sources[0],
+            ]
+        )
+
+        # Next, compile the C source code to object files.
 
         # XXX not honouring 'define_macros' or 'undef_macros' -- the
         # CCompiler API needs to change to accommodate this, and I
@@ -60,6 +109,8 @@ class build_zig_ext(build_ext):
             macros.append((undef,))
 
         ### FIXME!!! This part and afterwards is where C code is compiled.
+        ### This should happen AFTER the zig code is compiled, since the zig code may
+        ### emit a C header file that this step depends on.
         objects = self.compiler.compile(
             sources,
             output_dir=self.build_temp,
@@ -96,34 +147,6 @@ class build_zig_ext(build_ext):
             debug=self.debug,
             build_temp=self.build_temp,
             target_lang=language,
-        )
-
-        ### This code is copied from zaml. Need to update and modify for this lib.
-        if not os.path.exists(self.build_lib):
-            os.makedirs(self.build_lib)
-        windows = platform.system() == "Windows"
-        self.spawn(
-            [
-                "zig",
-                "build-lib",
-                "-O",
-                "ReleaseFast",
-                "-lc",
-                *(["-target", "x86_64-windows-msvc"] if windows else []),
-                f"-femit-bin={self.get_ext_fullpath(ext.name)}",
-                "-fallow-shlib-undefined",
-                "-dynamic",
-                *[f"-I{d}" for d in self.include_dirs],
-                *(
-                    [
-                        f"-L{sysconfig.get_config_var('installed_base')}\\Libs",
-                        "-lpython3",
-                    ]
-                    if windows
-                    else []
-                ),
-                ext.sources[0],
-            ]
         )
 
 
