@@ -3,13 +3,14 @@ from setuptools import Extension
 import warnings
 from typing import Optional
 
+
 class ZigExtension(Extension):
     def __init__(
         self,
         name: str,
         sources: list[str],
         include_dirs: Optional[list[str]]=None,
-        define_macros: Optional[list[str]]=None,
+        define_macros: Optional[list[tuple[str, str|None]]]=None,
         undef_macros: Optional[list[str]]=None,
         library_dirs: Optional[list[str]]=None,
         libraries: Optional[list[str]]=None,
@@ -23,16 +24,27 @@ class ZigExtension(Extension):
         depends: Optional[list[str]]=None,
         language: Optional[str]=None,
         optional: Optional[bool]=None,
+        py_limited_api: Optional[bool]=None,
         **kw  # To catch unknown keywords. Not used.
     ) -> None:
+
+        # self.sources and self.extra_compile_args are named for compatibility with the original
+        # Extension API. Naming these 'self.c_sources' and 'self.extra_c_compile_args' may break things.
 
         if not isinstance(name, str):
             raise AssertionError("'name' must be a string")
         if not (isinstance(sources, list) and all(isinstance(v, str) for v in sources)):
             raise AssertionError("'sources' must be a list of strings")
 
+        self.sources = []
+        self.zig_sources []
+        for s in sources:
+            if s.endswith(".zig"):
+                self.zig_sources += s
+            else:
+                self.sources += s
+        
         self.name = name
-        self.sources = sources
         self.include_dirs = include_dirs or []
         self.define_macros = define_macros or []
         self.undef_macros = undef_macros or []
@@ -48,6 +60,7 @@ class ZigExtension(Extension):
         self.depends = depends or []
         self.language = language
         self.optional = optional
+        self.py_limited_api = py_limited_api or False
 
         if len(kw) > 0:
             options = [repr(option) for option in kw]
