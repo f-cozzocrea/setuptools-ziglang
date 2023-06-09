@@ -1,18 +1,19 @@
 from setuptools._distutils.unixccompiler import UnixCCompiler
 
 import sys
-from importlib.util import find_spec
 
 
 class ZigCompiler(UnixCCompiler):
     compiler_type = 'zig'
-
+    
+    #### FIXME!
     # Prefer using the PyPI zig binary, else fall back to the system zig
-    if find_spec("ziglang"):
-        zig_bin = [sys.executable, '-m', 'ziglang',]
-    else:
-        zig_bin = ['zig']
+    ##if find_spec("ziglang"):
+    ##    zig_bin = [sys.executable, '-m', 'ziglang',]
+    ##else:
+    ##    zig_bin = ['zig']
 
+    zig_bin = [sys.executable, '-m', 'ziglang',]
 
     executables = {
         'preprocessor': None,
@@ -42,8 +43,16 @@ class ZigCompiler(UnixCCompiler):
     xcode_stub_lib_extension = ".tbd"
     static_lib_format = shared_lib_format = dylib_lib_format = "lib%s%s"
     xcode_stub_lib_format = dylib_lib_format
-    if sys.platform == "cygwin":
+    if sys.platform.startswith("cygwin") or sys.platform.startswith("win32"):
         exe_extension = ".exe"
 
+    
+    # TODO
+    #def preprocess(...):
+    #    ...
+
+    # TODO
+    #def create_static_lib(...):
+    #    ...
 
 

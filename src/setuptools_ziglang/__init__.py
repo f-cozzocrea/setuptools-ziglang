@@ -1,13 +1,9 @@
 from setuptools_ziglang import zigcompiler
-from setuptools_ziglang.zigextension import ZigExtension as Extension
 
 import os
 import sys
 from setuptools import Distribution
 from setuptools.command.build_ext import build_ext
-
-__all__ = ['Extension']
-
 
 # Add the Zig language and compiler to the list of compilers
 def patch_distutils_ccompiler(module):
@@ -43,13 +39,13 @@ def set_zig_compiler(dist: Distribution) -> None:
     print("Setting zig as the compiler for build_ext...")
     base_build_ext = dist.cmdclass.get('build_ext', build_ext)
     base_build_ext.compiler = 'zig'
+
     dist.cmdclass['build_ext'] = base_build_ext
 
     #print("Setting zig as the compiler for bdist_wheel")
     #base_bdist_wheel = dist.cmdclass.get('bdist_wheel', bdist_wheel)
     #base_bdist_wheel.
 
-    breakpoint()
 
 # Defines the order that setuptools runs entry points for 'finalize_distribution_options'.
 # 0 is the default. 100 is arbitrarily chosen so that users can set their own entry points
