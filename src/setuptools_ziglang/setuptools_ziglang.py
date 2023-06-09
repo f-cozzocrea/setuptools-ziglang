@@ -8,8 +8,10 @@ import logging as log
 
 log.basicConfig(level=log.INFO)
 
+
 class ZigExtension(Extension):
     pass 
+
 
 class build_zig_ext(build_ext):
     def build_extension(self, ext):
