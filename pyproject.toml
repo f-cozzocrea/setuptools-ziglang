@@ -1,6 +1,6 @@
 [project]
 name = "setuptools-ziglang"
-version = "0.0.1a"
+version = "0.0.3a"
 description = "Setuptools extension for building Python extensions with the Zig compiler"
 readme = {file = "README.md", content-type = "text/markdown"}
 license = {file = "LICENSE"}
