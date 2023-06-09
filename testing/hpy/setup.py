@@ -1,5 +1,3 @@
-# setup.py
-
 from setuptools import setup, Extension
 from os import path
 
