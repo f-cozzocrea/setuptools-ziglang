@@ -3,6 +3,7 @@ from setuptools_ziglang.zigextension import ZigExtension as Extension
 
 import os
 import distutils
+from setuptools import Distribution
 from setuptools._distutils import ccompiler
 
 __all__ = ['Extension']
@@ -24,5 +25,14 @@ if os.getenv("SETUPTOOLS_FORCE_ZIG", None):
     )
 
 
+# dist finalize options entry point
+def set_zig_compiler(dist: Distribution) -> None:
+    print("Setting zig as the compiler for build_ext...")
+    dist.cmdclass['build_ext'].compiler = 'zig'
+
+# Defines the order that setuptools runs entry points for 'finalize_distribution_options'.
+# 0 is the default. 100 is arbitrarily chosen so that users can set their own entry points
+# either before or after this one.
+set_zig_compiler.order = 100
 
 
