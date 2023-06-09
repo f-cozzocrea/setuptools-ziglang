@@ -30,6 +30,6 @@ Repository = "https://github.com/f-cozzocrea/setuptools-ziglang"
 Issues = "https://github.com/f-cozzocrea/setuptools-ziglang/issues"
 
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools", "wheel", "ziglang"]
 build-backend = "setuptools.build_meta"
 
