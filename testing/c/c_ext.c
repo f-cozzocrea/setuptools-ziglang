@@ -2,7 +2,7 @@
 #include <Python.h>
 
 static PyObject*
-say_hello(PyObject* self, PyObject *PyUNUSED(ignored))
+say_hello(PyObject* self, PyObject* args)
 {
   return PyUnicode_FromString("Hello, world!");
 }
