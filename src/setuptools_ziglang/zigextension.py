@@ -37,7 +37,7 @@ class ZigExtension(Extension):
             raise AssertionError("'sources' must be a list of strings")
 
         self.sources = []
-        self.zig_sources []
+        self.zig_sources = []
         for s in sources:
             if s.endswith(".zig"):
                 self.zig_sources += s
