@@ -3,6 +3,6 @@ name = "c-ext"
 version = "0.0.0"
 
 [build-system]
-requires = ["setuptools", "setuptools-ziglang"]
+requires = ["setuptools", "setuptools-ziglang", "ziglang"]
 build-backend = "setuptools.build_meta"
 
