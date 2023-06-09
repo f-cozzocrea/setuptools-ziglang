@@ -4,7 +4,6 @@ import sys
 from importlib.util import find_spec
 
 
-
 class ZigCompiler(UnixCCompiler):
     compiler_type = 'zig'
 
