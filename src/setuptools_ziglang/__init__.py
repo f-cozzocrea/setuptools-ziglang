@@ -5,6 +5,8 @@ import os
 import distutils
 from setuptools import Distribution
 from setuptools._distutils import ccompiler
+from setuptools.command.build_ext import build_ext
+from wheel.bdist_wheel import bdist_wheel
 
 __all__ = ['Extension']
 
@@ -28,7 +30,15 @@ if os.getenv("SETUPTOOLS_FORCE_ZIG", None):
 # dist finalize options entry point
 def set_zig_compiler(dist: Distribution) -> None:
     print("Setting zig as the compiler for build_ext...")
-    dist.cmdclass['build_ext'].compiler = 'zig'
+    base_build_ext = dist.cmdclass.get('build_ext', build_ext)
+    base_build_ext.compiler = 'zig'
+    dist.cmdclass['build_ext'] = base_build_ext
+
+    #print("Setting zig as the compiler for bdist_wheel")
+    #base_bdist_wheel = dist.cmdclass.get('bdist_wheel', bdist_wheel)
+    #base_bdist_wheel.
+
+    breakpoint()
 
 # Defines the order that setuptools runs entry points for 'finalize_distribution_options'.
 # 0 is the default. 100 is arbitrarily chosen so that users can set their own entry points
