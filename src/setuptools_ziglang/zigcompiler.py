@@ -55,4 +55,24 @@ class ZigCompiler(UnixCCompiler):
     #def create_static_lib(...):
     #    ...
 
+    # TODO
+    #def link(...):
+    #    ...
+
+    # TODO
+    #def library_dir_option(...):
+    #    ...
+
+    # TODO
+    #def runtime_library_dir_option(...):
+    #    ...
+
+    # TODO
+    #def library_option(...):
+    #    ...
+   
+    # TODO
+    #def find_library_file(...):
+    #    ...
+
 
