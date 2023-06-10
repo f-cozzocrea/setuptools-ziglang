@@ -25,7 +25,6 @@ class BuildZigExt(build_ext):
         # differently named.  We convert these 2-tuples to Extension
         # instances as needed.
         
-        breakpoint()
         if not self.extensions:
             return
         
@@ -38,7 +37,6 @@ class BuildZigExt(build_ext):
             self.library_dirs.append(build_clib.build_clib)
 
         self.compiler = ZigCompiler()
-        customize_compiler(self.compiler)
 
         # And make sure that any compile/link-related options (which might
         # come from the command-line or from the setup script) are set in
