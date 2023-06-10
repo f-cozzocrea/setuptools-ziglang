@@ -37,6 +37,7 @@ class BuildZigExt(build_ext):
             self.library_dirs.append(build_clib.build_clib)
 
         self.compiler = ZigCompiler()
+        self.compiler.set_default_flags()
 
         # And make sure that any compile/link-related options (which might
         # come from the command-line or from the setup script) are set in

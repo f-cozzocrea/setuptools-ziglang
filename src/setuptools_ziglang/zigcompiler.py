@@ -123,11 +123,11 @@ class ZigCompiler(UnixCCompiler):
                 ldshared = newcc + ldshared[len(cc) :]
             cc = newcc
         else:
-            cc = self.executables['compiler']
+            cc = ' '.join(self.executables['compiler'])
         if 'CXX' in os.environ:
             cxx = os.environ['CXX']
         else:
-            cxx = self.executables['compiler_cxx']
+            cxx = ' '.join(self.executables['compiler_cxx'])
         if 'LDSHARED' in os.environ:
             ldshared = os.environ['LDSHARED']
         if 'CPP' in os.environ:
@@ -152,8 +152,8 @@ class ZigCompiler(UnixCCompiler):
 
         cc_cmd = cc + ' ' + cflags
 
-        zig_bin = self.executables['compiler_zig']
-        zig_cmd = zig_bin + ' ' + ['-cflags'] + ' ' + cflags + ' ' + ['--']
+        zig_bin = ' '.join(self.executables['compiler_zig'])
+        zig_cmd = zig_bin + ' ' + '-cflags' + ' ' + cflags + ' ' + '--'
 
         if sys.platform.startswith("win32"):
             zig_cmd += ["-target", "x86_64-windows-msvc"]
