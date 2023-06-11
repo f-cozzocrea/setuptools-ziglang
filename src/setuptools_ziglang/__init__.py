@@ -34,22 +34,3 @@ if sys.version_info[1] >= 12:
         pass
 
 
-# dist finalize options entry point
-def set_zig_compiler(dist: Distribution) -> None:
-    print("Setting zig as the compiler for build_ext...")
-    base_build_ext = dist.cmdclass.get('build_ext', build_ext)
-    base_build_ext.compiler = 'zig'
-
-    dist.cmdclass['build_ext'] = base_build_ext
-
-    #print("Setting zig as the compiler for bdist_wheel")
-    #base_bdist_wheel = dist.cmdclass.get('bdist_wheel', bdist_wheel)
-    #base_bdist_wheel.
-
-
-# Defines the order that setuptools runs entry points for 'finalize_distribution_options'.
-# 0 is the default. 100 is arbitrarily chosen so that users can set their own entry points
-# either before or after this one.
-set_zig_compiler.order = 100
-
-
