@@ -2,8 +2,6 @@ from setuptools_ziglang import zigcompiler
 
 import os
 import sys
-from setuptools import Distribution
-from setuptools.command.build_ext import build_ext
 
 # Add the Zig language and compiler to the list of compilers
 def patch_distutils_ccompiler(module):
