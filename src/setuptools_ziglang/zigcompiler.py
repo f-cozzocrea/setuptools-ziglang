@@ -1,17 +1,16 @@
-from setuptools._distutils.unixccompiler import UnixCCompiler, _split_env, _split_aix, _linker_params
-from setuptools._distutils.ccompiler import CCompiler, gen_lib_options
+from setuptools._distutils.ccompiler import CCompiler, gen_preprocess_options, gen_lib_options
+from setuptools._distutils.dep_util import newer
+from setuptools._distutils.errors import DistutilsExecError, CompileError, LinkError, LibError
 
 import os
 import sys
 import logging
-from sysconfig import get_config_vars
-
-from setuptools._distutils.errors import DistutilsExecError, CompileError, LinkError
+from sysconfig import get_config_var, get_config_vars
 
 _logger = logging.getLogger(__name__)
 
 
-class ZigCompiler(UnixCCompiler):
+class ZigCompiler(CCompiler):
     compiler_type = 'zig'
     
     # Prefer using the PyPI zig binary, else fall back to the system zig
@@ -50,6 +49,42 @@ class ZigCompiler(UnixCCompiler):
     if sys.platform.startswith("cygwin") or sys.platform.startswith("win32"):
         exe_extension = ".exe"
 
+    def preprocess(
+        self,
+        source,
+        output_file=None,
+        macros=None,
+        include_dirs=None,
+        extra_preargs=None,
+        extra_postargs=None,
+    ):
+        fixed_args = self._fix_compile_args(None, macros, include_dirs)
+        ignore, macros, include_dirs = fixed_args
+        pp_opts = gen_preprocess_options(macros, include_dirs)
+        pp_args = self.preprocessor + pp_opts
+        if output_file:
+            pp_args.extend(['-o', output_file])
+        if extra_preargs:
+            pp_args[:0] = extra_preargs
+        if extra_postargs:
+            pp_args.extend(extra_postargs)
+        pp_args.append(source)
+
+        # reasons to preprocess:
+        # - force is indicated
+        # - output is directed to stdout
+        # - source file is newer than the target
+        preprocess = self.force or output_file is None or newer(source, output_file)
+        if not preprocess:
+            return
+
+        if output_file:
+            self.mkpath(os.path.dirname(output_file))
+
+        try:
+            self.spawn(pp_args)
+        except DistutilsExecError as msg:
+            raise CompileError(msg)
 
     def compile(
         self,
@@ -62,7 +97,6 @@ class ZigCompiler(UnixCCompiler):
         extra_postargs=None,
         depends=None,
         ):
-        breakpoint()        
         macros, objects, extra_postargs, pp_opts, build = self._setup_compile(
             output_dir, macros, include_dirs, sources, depends, extra_postargs
         )
@@ -85,13 +119,36 @@ class ZigCompiler(UnixCCompiler):
         return objects
 
     def _compile(self, obj, src, ext, cc_args, extra_postargs, pp_opts):
-        breakpoint()
         compiler_so = self.executables['compiler_so']
         obj_path = '-femit-bin={0}'.format(obj)
         try:
             self.spawn(compiler_so + cc_args + [src, obj_path] + extra_postargs)
         except DistutilsExecError as msg:
             raise CompileError(msg)
+
+    def create_static_lib(
+        self, objects, output_libname, output_dir=None, debug=0, target_lang=None
+    ):
+        objects, output_dir = self._fix_object_args(objects, output_dir)
+
+        output_filename = self.library_filename(output_libname, output_dir=output_dir)
+
+        if self._need_link(objects, output_filename):
+            self.mkpath(os.path.dirname(output_filename))
+            self.spawn(self.archiver + [output_filename] + objects + self.objects)
+
+            # Not many Unices required ranlib anymore -- SunOS 4.x is, I
+            # think the only major Unix that does.  Maybe we need some
+            # platform intelligence here to skip ranlib if it's not
+            # needed -- or maybe Python's configure script took care of
+            # it for us, hence the check for leading colon.
+            if self.ranlib:
+                try:
+                    self.spawn(self.ranlib + [output_filename])
+                except DistutilsExecError as msg:
+                    raise LibError(msg)
+        else:
+            _logger.debug("skipping %s (up-to-date)", output_filename)
 
     def link(
         self,
@@ -137,47 +194,97 @@ class ZigCompiler(UnixCCompiler):
                 building_exe = target_desc == CCompiler.EXECUTABLE
                 linker = (self.linker_exe if building_exe else self.linker_so)[:]
 
-                if target_lang == "c++" and self.compiler_cxx:
-                    env, linker_ne = _split_env(linker)
-                    aix, linker_na = _split_aix(linker_ne)
-                    _, compiler_cxx_ne = _split_env(self.compiler_cxx)
-                    _, linker_exe_ne = _split_env(self.linker_exe)
-
-                    params = _linker_params(linker_na, linker_exe_ne)
-                    linker = env + aix + compiler_cxx_ne + params
-
-                #linker = compiler_fixup(linker, ld_args)
-
                 self.spawn(linker + ld_args)
             except DistutilsExecError as msg:
                 raise LinkError(msg)
         else:
             _logger.debug("skipping %s (up-to-date)", output_filename)
 
-    # TODO
-    #def preprocess(...):
-    #    ...
+    def library_dir_option(self, dir):
+        return "-L" + dir
 
-    # TODO
-    #def create_static_lib(...):
-    #    ...
+    def runtime_library_dir_option(self, dir):
+        # XXX Hackish, at the very least.  See Python bug #445902:
+        # http://sourceforge.net/tracker/index.php
+        #   ?func=detail&aid=445902&group_id=5470&atid=105470
+        # Linkers on different platforms need different options to
+        # specify that directories need to be added to the list of
+        # directories searched for dependencies when a dynamic library
+        # is sought.  GCC on GNU systems (Linux, FreeBSD, ...) has to
+        # be told to pass the -R option through to the linker, whereas
+        # other compilers and gcc on other systems just know this.
+        # Other compilers may need something slightly different.  At
+        # this time, there's no way to determine this information from
+        # the configuration data stored in the Python installation, so
+        # we use this hack.
+        if sys.platform[:6] == "darwin":
+            from distutils.util import get_macosx_target_ver, split_version
 
-    # TODO
-    #def library_dir_option(...):
-    #    ...
+            macosx_target_ver = get_macosx_target_ver()
+            if macosx_target_ver and split_version(macosx_target_ver) >= [10, 5]:
+                return "-Wl,-rpath," + dir
+            else:  # no support for -rpath on earlier macOS versions
+                return "-L" + dir
+        elif sys.platform[:7] == "freebsd":
+            return "-Wl,-rpath=" + dir
+        elif sys.platform[:5] == "hp-ux":
+            return [
+                "-Wl,+s" if self._is_gcc() else "+s",
+                "-L" + dir,
+            ]
 
-    # TODO
-    #def runtime_library_dir_option(...):
-    #    ...
+        # For all compilers, `-Wl` is the presumed way to
+        # pass a compiler option to the linker and `-R` is
+        # the way to pass an RPATH.
+        if get_config_var("GNULD") == "yes":
+            # GNU ld needs an extra option to get a RUNPATH
+            # instead of just an RPATH.
+            return "-Wl,--enable-new-dtags,-R" + dir
+        else:
+            return "-Wl,-R" + dir
 
-    # TODO
-    #def library_option(...):
-    #    ...
-   
-    # TODO
-    #def find_library_file(...):
-    #    ...
+    def library_option(self, lib):
+        return "-l" + lib
 
+    def find_library_file(self, dirs, lib, debug=0):
+        r"""
+        Second-guess the linker with not much hard
+        data to go on: GCC seems to prefer the shared library, so
+        assume that *all* Unix C compilers do,
+        ignoring even GCC's "-static" option.
+
+        >>> compiler = UnixCCompiler()
+        >>> compiler._library_root = lambda dir: dir
+        >>> monkeypatch = getfixture('monkeypatch')
+        >>> monkeypatch.setattr(os.path, 'exists', lambda d: 'existing' in d)
+        >>> dirs = ('/foo/bar/missing', '/foo/bar/existing')
+        >>> compiler.find_library_file(dirs, 'abc').replace('\\', '/')
+        '/foo/bar/existing/libabc.dylib'
+        >>> compiler.find_library_file(reversed(dirs), 'abc').replace('\\', '/')
+        '/foo/bar/existing/libabc.dylib'
+        >>> monkeypatch.setattr(os.path, 'exists',
+        ...     lambda d: 'existing' in d and '.a' in d)
+        >>> compiler.find_library_file(dirs, 'abc').replace('\\', '/')
+        '/foo/bar/existing/libabc.a'
+        >>> compiler.find_library_file(reversed(dirs), 'abc').replace('\\', '/')
+        '/foo/bar/existing/libabc.a'
+        """
+        lib_names = (
+            self.library_filename(lib, lib_type=type)
+            for type in 'dylib xcode_stub shared static'.split()
+        )
+
+        roots = map(self._library_root, dirs)
+
+        searched = (
+            os.path.join(root, lib_name)
+            for root, lib_name in itertools.product(roots, lib_names)
+        )
+
+        found = filter(os.path.exists, searched)
+
+        # Return None if it could not be found in any dir.
+        return next(found, None)
    
     def set_default_flags(self) -> None:
         (
