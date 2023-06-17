@@ -6,10 +6,15 @@ DIR = path.dirname(__file__)
 setup(
     name="hpy-test",
     hpy_ext_modules=[
-        Extension('hpy_test', sources=[path.join(DIR, 'hpy-test.c')], extra_compile_args=['-lc']),
+        Extension(
+            name='hpy_test', 
+            sources=[path.join(DIR, 'hpy-test.c')], 
+            extra_compile_args=['-lc'],
+            py_limited_api=True,
+        ),
     ],
     cmdclass={'build_ext': BuildZigExt},
     setup_requires=['hpy'],
-    zip_safe=False,
+    zip_safe=False, 
 )
 
