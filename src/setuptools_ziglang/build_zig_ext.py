@@ -2,28 +2,16 @@ from setuptools.extension import Library
 from setuptools.command.build_ext import build_ext
 
 import os
-from pathlib import Path
 
 class BuildZigExt(build_ext):
     def build_extension(self, ext):
-        ext._convert_pyx_sources_to_lang()
-        _compiler = self.compiler
-        try:
-            if isinstance(ext, Library):
-                self.compiler = self.shlib_compiler
-            build_ext.build_extension(self, ext)
-            if ext._needs_stub:
-                build_lib = self.get_finalized_command('build_py').build_lib
-                # FIXME: CHECK IF THE PATH EXISTS
-                self.write_stub(build_lib, ext)
-        finally:
-            self.compiler = _compiler
-
+        build_lib = self.get_finalized_command('build_py').build_lib
+        self.compiler.mkpath(build_lib)
+        build_ext.build_extension(self, ext)
 
     def run(self):
         from setuptools_ziglang.zigcompiler import ZigCompiler
 
-        breakpoint()
         if not self.extensions:
             return
         
