@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools", "setuptools-ziglang"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zaml"
+version = "0.0.9"
+description = "Fast YAML 1.2 Parser for Python 3.6+"
+readme = {file = "README.md", content-type = "test/markdown"}
+
+[project.urls]
+Respository = "https://github.com/adamserafini/zaml"
+
